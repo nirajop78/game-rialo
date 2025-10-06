@@ -1,29 +1,9 @@
-<!--
-Project: rialo — Simple Endless Jumper (Browser)
-Files included below: index.html (single-file game), README, LICENSE (MIT).
-
-How to run:
-1. Save this file as index.html and open in a modern browser (Chrome/Firefox/Edge).
-2. Or create a GitHub repo named `rialo`, add these files, and enable GitHub Pages to host the demo.
-
-Optional: I can generate a downloadable ZIP or give commands to push to a GitHub repo if you provide the repo URL and access token.
-
-Controls:
-- Space / Up Arrow / Click / Tap = Jump
-- Left / Right Arrow = Move horizontally (or use touch left/right)
-
-Gameplay:
-Endless vertical jumper: the player (square) jumps between platforms. Platforms move downward to create an endless climb illusion. Collect stars for score. Game speeds up gradually.
-
-License: MIT (see bottom)
--->
-
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>rialo — Endless Jumper (Demo)</title>
+  <title>Rialo — Jumping Game</title>
   <style>
     :root{--bg:#0b1220;--card:#0f1724;--accent:#ffd166;--muted:#9aa6b2}
     html,body{height:100%;margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
@@ -43,8 +23,8 @@ License: MIT (see bottom)
   <div class="wrapper">
     <header>
       <div>
-        <h1>rialo — Endless Jumper (Demo)</h1>
-        <div class="meta">Single-file browser game • Keyboard & touch • Score + Stars</div>
+        <h1>Rialo — Jumping Game</h1>
+        <div class="meta">Rialo Team Edition • Keyboard & touch • Score + Stars</div>
       </div>
       <div class="meta">Team review ready</div>
     </header>
@@ -60,13 +40,10 @@ License: MIT (see bottom)
   </div>
 
 <script>
-// ----- rialo: simple endless jumper -----
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const W = canvas.width; const H = canvas.height;
 let keys = {}, touchX = null;
-
-// Game state
 let state = 'menu';
 let player, platforms, stars, score, speedMultiplier, frame;
 
@@ -77,7 +54,6 @@ function reset(){
   score = 0;
   speedMultiplier = 1;
   frame = 0;
-  // create initial platforms
   let y = H-40;
   while(y > -H){
     platforms.push({x: randRange(40, W-120), y: y, w: randRange(80, 140), h: 12});
@@ -90,39 +66,27 @@ function randRange(a,b){return Math.floor(Math.random()*(b-a))+a}
 
 function update(dt){
   frame++;
-  // input: left/right
   if(keys['ArrowLeft']||keys['a']) player.x -= 200*dt;
   if(keys['ArrowRight']||keys['d']) player.x += 200*dt;
-  // wrap
   if(player.x < -player.w) player.x = W;
   if(player.x > W) player.x = -player.w;
-
-  // gravity
   player.vy += 900*dt;
   player.y += player.vy*dt;
-
-  // collision with platforms (only when falling)
   player.grounded = false;
   for(let p of platforms){
     if(player.vy > 0 && player.x + player.w > p.x && player.x < p.x + p.w && player.y + player.h > p.y && player.y + player.h < p.y + p.h + 30){
       player.y = p.y - player.h; player.vy = 0; player.grounded = true;
     }
   }
-
-  // auto-scroll effect: when player goes above mid screen, move platforms down
   if(player.y < H*0.45){
     const dy = Math.max(0, (H*0.45 - player.y));
-    player.y += dy; // keep player in view
+    player.y += dy;
     for(let p of platforms) p.y += dy * 0.6 * speedMultiplier;
     for(let s of stars) s.y += dy * 0.6 * speedMultiplier;
     score += Math.floor(dy*0.1);
   }
-
-  // remove platforms that go below
   platforms = platforms.filter(p => p.y < H+40);
   stars = stars.filter(s => s.y < H+40 && !s.collected);
-
-  // add new platforms at top
   while(platforms.length < 8){
     const lastY = platforms.length? Math.min(...platforms.map(p=>p.y)) : -40;
     const newY = lastY - randRange(80,140);
@@ -130,61 +94,38 @@ function update(dt){
     platforms.push(newP);
     if(Math.random() < 0.4) stars.push({x: newP.x + randRange(16,newP.w-24), y: newP.y - 20, r: 8, collected:false});
   }
-
-  // star collection
   for(let s of stars){
     if(!s.collected && player.x + player.w > s.x && player.x < s.x + s.r*2 && player.y + player.h > s.y && player.y < s.y + s.r*2){
-      s.collected = true; score += 50; // bonus
+      s.collected = true; score += 50;
     }
   }
-
-  // falling death
   if(player.y > H+60){ state = 'gameover'; }
-
-  // speed up gradually
   if(frame % 600 === 0) speedMultiplier += 0.04;
 }
 
 function draw(){
-  // background
   ctx.clearRect(0,0,W,H);
-  // gradient sky
   const g = ctx.createLinearGradient(0,0,0,H);
   g.addColorStop(0,'#041227'); g.addColorStop(1,'#051426');
   ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
-
-  // draw platforms
-  for(let p of platforms){
-    roundRect(ctx, p.x, p.y, p.w, p.h, 6, '#18324b', '#0ea5a0');
-  }
-
-  // draw stars
-  for(let s of stars){
-    if(s.collected) continue;
-    drawStar(ctx, s.x+s.r, s.y+s.r, s.r, 5);
-  }
-
-  // draw player
+  for(let p of platforms){ roundRect(ctx, p.x, p.y, p.w, p.h, 6, '#18324b', '#0ea5a0'); }
+  for(let s of stars){ if(!s.collected) drawStar(ctx, s.x+s.r, s.y+s.r, s.r, 5); }
   roundRect(ctx, player.x, player.y, player.w, player.h, 6, '#ffd166', '#ff8c42');
-
-  // UI
-  ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = '18px system-ui'; ctx.fillText('Score: '+score, 12, 26);
-  ctx.font = '12px system-ui'; ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.fillText('Stars collected: '+stars.filter(s=>s.collected).length, 12, 44);
-
+  ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = '18px system-ui'; ctx.fillText('Rialo Score: '+score, 12, 26);
+  ctx.font = '12px system-ui'; ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.fillText('Rialo Stars: '+stars.filter(s=>s.collected).length, 12, 44);
   if(state === 'menu'){
     ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(W/2-140, H/2-70, 280, 140);
-    ctx.fillStyle = '#fff'; ctx.font = '20px system-ui'; ctx.fillText('rialo — Endless Jumper', W/2-120, H/2-30);
-    ctx.font='14px system-ui'; ctx.fillText('Press Space / Tap to jump and start', W/2-100, H/2+4);
+    ctx.fillStyle = '#fff'; ctx.font = '20px system-ui'; ctx.fillText('Rialo — Jumping Game', W/2-120, H/2-30);
+    ctx.font='14px system-ui'; ctx.fillText('Press Space / Tap to start jumping', W/2-100, H/2+4);
   }
   if(state === 'gameover'){
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(W/2-160, H/2-80, 320, 160);
-    ctx.fillStyle = '#fff'; ctx.font='26px system-ui'; ctx.fillText('Game Over', W/2-70, H/2-20);
+    ctx.fillStyle = '#fff'; ctx.font='26px system-ui'; ctx.fillText('Rialo Game Over', W/2-100, H/2-20);
     ctx.font='16px system-ui'; ctx.fillText('Final score: '+score, W/2-70, H/2+8);
-    ctx.font='14px system-ui'; ctx.fillText('Click START to play again', W/2-70, H/2+36);
+    ctx.font='14px system-ui'; ctx.fillText('Click START to play Rialo again', W/2-100, H/2+36);
   }
 }
 
-// helpers
 function roundRect(ctx,x,y,w,h,r, fill, stroke){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); if(fill){ ctx.fillStyle = fill; ctx.fill(); } if(stroke){ ctx.strokeStyle = stroke; ctx.stroke(); } }
 
 function drawStar(ctx, cx, cy, r, spikes){
@@ -198,15 +139,12 @@ function drawStar(ctx, cx, cy, r, spikes){
   ctx.closePath(); ctx.fillStyle = '#ffe66d'; ctx.fill(); ctx.restore();
 }
 
-// jump
 function doJump(){
   if(state === 'menu'){ state = 'playing'; }
   if(state === 'gameover'){ reset(); state='playing'; }
-  // allow jump when grounded or small coyote time
   if(player.grounded || player.vy > -200){ player.vy = -420; player.grounded = false; }
 }
 
-// game loop
 let last = performance.now();
 function loop(now){
   const dt = Math.min(1/30, (now-last)/1000);
@@ -216,7 +154,6 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 
-// input
 window.addEventListener('keydown', e => { keys[e.key]=true; if(e.key===' '|| e.key==='ArrowUp') { e.preventDefault(); doJump(); } });
 window.addEventListener('keyup', e => { keys[e.key]=false; });
 canvas.addEventListener('click', e => { doJump(); });
@@ -226,58 +163,7 @@ canvas.addEventListener('touchend', e => { touchX = null; });
 
 document.getElementById('startBtn').addEventListener('click', ()=>{ if(state==='menu' || state==='gameover') { reset(); state='playing'; } });
 
-// initialize
 reset(); state='menu'; requestAnimationFrame(loop);
-
 </script>
-
-<!--
-README (short)
-
-rialo — Simple Endless Jumper (Demo)
-
-Files:
-- index.html : single-file demo. Open in browser to play.
-
-How to publish on GitHub:
-1. Create a new repo named `rialo`.
-2. Add index.html and LICENSE to the repo.
-3. Commit and push.
-4. Enable GitHub Pages (Settings -> Pages) and set branch to main and root folder.
-
-Suggested next steps (team review ideas):
-- Add sprites & sound effects
-- Save high scores to localStorage or backend
-- Add difficulty modes and leaderboards
-- Convert to React + Tailwind for a multi-file project
-
-License: MIT (below)
--->
-
-<!-- MIT License -->
-<!--
-MIT License
-
-Copyright (c) 2025 rialo
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
--->
-
 </body>
 </html>
